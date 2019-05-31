@@ -9,10 +9,24 @@ import csv, re
 
 print(twitter_samples.fileids())
 
-# Got Sample Data
-positive_got_tweet_file = "/Users/krishna/PycharmProjects/thatgotapi/positive-got.txt"
-negative_got_tweet_file = "/Users/krishna/PycharmProjects/thatgotapi/negative-got.txt"
-neutral_got_tweet_file = "/Users/krishna/PycharmProjects/thatgotapi/neutral-got.txt"
+pos_tweets = twitter_samples.strings('positive_tweets.json')
+print(len(pos_tweets))  # Output: 5000
+
+neg_tweets = twitter_samples.strings('negative_tweets.json')
+print(len(neg_tweets))  # Output: 5000
+
+all_tweets = twitter_samples.strings('tweets.20150430-223406.json')
+print (len(all_tweets)) # Output: 20000
+
+# positive tweets words list
+pos_tweets_set = []
+for tweet in pos_tweets:
+    pos_tweets_set.append((tweet,1))
+
+# negative tweets words list
+neg_tweets_set = []
+for tweet in neg_tweets:
+    neg_tweets_set.append((tweet,-1))
 
 
 def cleantweet(tmpline):
@@ -22,25 +36,8 @@ def cleantweet(tmpline):
     return re.sub(r"http\S+", "", tmpline)
 
 
-def loadtweets(fileLoc,polarity,tweets):
-    with codecs.open(fileLoc, 'r', encoding='utf8') as fp:
-        curr=fp.readline()
-        cnt = 1
-        while curr:
-            curr = cleantweet(curr)
-            tweets.append((curr,polarity))
-            print("Line {}: {}".format(cnt, curr.strip()))
-            curr = fp.readline()
-            cnt += 1
-    return tweets
+train_set = pos_tweets_set + neg_tweets_set
 
-
-got_pos_tweets = loadtweets(positive_got_tweet_file,1,[])
-got_neg_tweets = loadtweets(negative_got_tweet_file,-1,[])
-got_neu_tweets = loadtweets(neutral_got_tweet_file,0,[])
-
-
-train_set = got_pos_tweets + got_neg_tweets + got_neu_tweets
 
 # train classifier
 from textblob.classifiers import NaiveBayesClassifier
@@ -53,19 +50,18 @@ print(" Training Classifier Complete -------------------")
 polarity = 0
 positive = 0
 negative = 0
-neutral = 0
 
 # Got episode tweets
 got_ep_tweet_file = "/Users/krishna/PycharmProjects/thatgotapi/got-ep4.txt"
 
 
-def plotDefPoints(positive, negative, neutral, total):
-    labels = ['Positive [' + str(positive) + ']', 'Neutral [' + str(neutral) + ']',
+def plotDefPoints(positive, negative, total):
+    labels = ['Positive [' + str(positive) + ']',
               'Negative [' + str(negative) + ']']
 
     print(labels)
-    sizes = [positive, neutral, negative]
-    colors = ['yellowgreen', 'gold', 'darkred']
+    sizes = [positive, negative]
+    colors = ['yellowgreen', 'darkred']
     patches, texts = plt.pie(sizes, colors=colors, startangle=90)
     plt.legend(patches, labels, loc="best")
     plt.title('How people are reacting on GOT ' + ' by analyzing ' + str(total) + ' Tweets.')
@@ -83,9 +79,7 @@ with codecs.open(got_ep_tweet_file, 'r', encoding='utf8') as fp:
         blob = TextBlob(tweet, classifier=classifier)
         polarity += blob.sentiment.polarity
         cnt = cnt + 1
-        if (blob.sentiment.polarity == 0):  # adding reaction of how people are reacting to find average later
-            neutral += 1
-        elif (blob.sentiment.polarity > 0):
+        if  (blob.sentiment.polarity >= 0):
             positive += 1
         elif (blob.sentiment.polarity < 0):
             negative += 1
@@ -94,8 +88,7 @@ with codecs.open(got_ep_tweet_file, 'r', encoding='utf8') as fp:
 
     print('Positive ' + str(positive))
     print('Negative ' + str(negative))
-    print('Neutral ' + str(neutral))
 
     print(classifier.show_informative_features(10))
 
-    plotDefPoints(positive, negative, neutral, cnt)
+    plotDefPoints(positive, negative, cnt)
